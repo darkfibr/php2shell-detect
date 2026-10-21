@@ -2,9 +2,10 @@
 
 Defensive detection toolkit for **php2shell** — the `session.upload_progress`
 heap use-after-free pair **CVE-2026-109618 / CVE-2026-109619** (CVSS v4.0 9.2
-each, PHP 5.4 through 8.5). A PHP emergency release was announced for
-2026-10-21 14:00 UTC; a public PoC and a full mechanics writeup are already
-circulating, and scanning started *before* the patch.
+each, PHP 5.4 through 8.5). The PHP emergency release landed **2026-10-21**:
+**8.5.12 / 8.4.27 / 8.3.36** — 8.2 and older received no fix. A public PoC and
+a full mechanics writeup were circulating before the patch, and scanning
+started before it too.
 
 Everything here is **read-only and offline**: it scans evidence you already
 have (logs, captured bodies, files on disk). Nothing phones home, nothing
@@ -89,10 +90,12 @@ estate check and, if you have edge capture, the v2 rules.
 
 ## Notes on the estate check
 
-`php2shell_check.py` ships with an **empty** fixed-version table: no official
-fixed versions existed at time of writing, and inventing them is worse than
-shipping none. Feed it `--fixed-map versions.json`
-(`{"8.4": "8.4.5", ...}`) once PHP publishes the releases.
+`php2shell_check.py` ships with the fixed-version table **filled from the
+2026-10-21 emergency release**: `8.5.12`, `8.4.27`, `8.3.36`. PHP **8.2
+received no release in that set** and is treated as affected with no confirmed
+fix — upgrade branch rather than wait for an 8.2 patch. Use `--fixed-map
+versions.json` (`{"8.4": "8.4.27", ...}`) to override or extend if PHP
+publishes further fixes.
 
 Also: `magic_quotes_gpc` does nothing here (removed in PHP 5.4). If a guide
 suggests it as a mitigation, the guide is older than the bug class.

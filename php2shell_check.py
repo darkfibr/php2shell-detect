@@ -52,13 +52,16 @@ from datetime import datetime
 # vulnerable. Conservative: anything we cannot place is UNKNOWN, not "safe".
 AFFECTED_RANGE = "5.4 through 8.5 (8.1, 8.0, 7.x, 5.x are EOL and unpatched)"
 
-# Minimum versions carrying the fix, per branch. INTENTIONALLY EMPTY by
-# default: the emergency release was scheduled for 2026-10-21 14:00 UTC, and
-# until those release notes are public the exact fixed versions are not known.
-# Shipping guessed version numbers would be worse than shipping none.
-# Update at runtime with --fixed-map <file.json> containing {"8.2": "8.2.29", ...}
-# once you have the official release notes in front of you.
-FIXED_MIN = {}
+# Minimum versions carrying the fix, per branch. Filled from the official
+# 2026-10-21 emergency release (tarballs live on php.net): 8.5.12, 8.4.27,
+# 8.3.36. PHP 8.2 received NO release in that set — it stays on the affected
+# list with no confirmed fix; upgrade instead of waiting for an 8.2 patch.
+# Override or extend at runtime with --fixed-map <file.json> {"8.4": "8.4.27", ...}
+FIXED_MIN = {
+    "8.3": "8.3.36",
+    "8.4": "8.4.27",
+    "8.5": "8.5.12",
+}
 
 # Branches covered by the advisories (all of 5.4 through 8.5).
 AFFECTED_BRANCHES = ("8.2", "8.3", "8.4", "8.5")
@@ -91,9 +94,9 @@ def classify(version):
     if fixed is None:
         if base in AFFECTED_BRANCHES:
             return ("VULNERABLE_VERSION",
-                    f"PHP {v} is in the affected range for CVE-2026-109618/109619; "
-                    f"this tool has no confirmed fix version for {base} "
-                    f"(update with --fixed-map after the release notes are public)")
+                    f"PHP {v} is in the affected range for CVE-2026-109618/109619 "
+                    f"and received no fix in the 2026-10-21 release set "
+                    f"({base} has no confirmed fixed version; upgrade branch)")
         return "UNKNOWN", f"PHP {v} is not in the published affected range ({AFFECTED_RANGE})"
     if version_tuple(v) < version_tuple(fixed):
         return "VULNERABLE_VERSION", f"PHP {v} is below {base} fix {fixed}"

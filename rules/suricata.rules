@@ -1,0 +1,26 @@
+# php2shell / CVE-2026-109618 / CVE-2026-109619 — Suricata rules
+# Status: UNTESTED against real traffic. Syntax is standard Suricata 6/7;
+# validate with `suricata -T -S suricata.rules` before deploying.
+# Scope: HTTP requests to any server. No exploit payload is generated here.
+
+alert http any any -> any any (msg:"php2shell exploit attempt - User-Agent php2shell-1096xx (CVE-2026-109618/109619)"; flow:to_server,established; http.user_agent; content:"php2shell-"; nocase; fast_pattern; classtype:attempted-admin; reference:cve,2026-109618; reference:cve,2026-109619; metadata:created_at 2026_10_21, updated_at 2026_10_21; sid:2026102101; rev:1;)
+
+alert http any any -> any any (msg:"php2shell exploit attempt - multipart boundary B7kQpoc (CVE-2026-109618/109619)"; flow:to_server,established; http.content_type; content:"multipart/form-data"; nocase; content:"boundary=B7kQpoc"; nocase; distance:0; classtype:attempted-admin; reference:cve,2026-109618; reference:cve,2026-109619; metadata:created_at 2026_10_21, updated_at 2026_10_21; sid:2026102102; rev:1;)
+
+alert http any any -> any any (msg:"php2shell upload-progress field in HTTP request body"; flow:to_server,established; http.request_body; content:"PHP_SESSION_UPLOAD_PROGRESS"; nocase; classtype:attempted-admin; reference:cve,2026-109618; reference:cve,2026-109619; metadata:created_at 2026_10_21, updated_at 2026_10_21; sid:2026102103; rev:1;)
+
+# Rule 2026102103 requires request-body inspection. In Suricata that means the
+# HTTP parser must be configured to log/inspect bodies and the rule must see
+# the body buffer; without that it will never fire. Rule 2026102101 is the
+# high-confidence, low-cost rule because nginx/apache log the UA by default.
+# Rule 2026102102 requires the Content-Type header to be visible to Suricata
+# (it normally is on the wire, even when the origin does not log it).
+
+# --- v2 (2026-10-21): mechanics-shape rules, UA-independent ----------------
+# Source: public vulnerability-mechanics writeup 2026-10-21 (CVE-2026-109618/109619).
+# The primitive requires (a) session upload-progress tracking and (b) a packed
+# array reclaim spray (PoC: 149x name="t[]" -> nTableSize 256 -> 320-byte bins).
+# 2000003 fires on both markers in one request body: an exploit attempt with
+# the UA stripped. Single-quoted content strings carry the literal quotes.
+alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"PHP php2shell mechanics shape: upload-progress + array reclaim spray (CVE-2026-109618/109619)"; flow:established,to_server; http.method; content:"POST"; http.uri; content:".php"; http.request_body; content:'name="PHP_SESSION_UPLOAD_PROGRESS"'; nocase; http.request_body; content:'name="t[]"'; nocase; pcre:'/(name="[a-z0-9_]*\[\]"[\s\S]*){100,}/i'; classtype:attempted-admin; sid:2000003; rev:1; metadata:created_at 2026_10_21;)
+alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"PHP php2shell known PoC user-agent (CVE-2026-109618/109619)"; flow:established,to_server; http.user_agent; content:"php2shell-"; nocase; pcre:"/php2shell-\d{6}/i"; classtype:attempted-admin; sid:2000004; rev:1; metadata:created_at 2026_10_21;)

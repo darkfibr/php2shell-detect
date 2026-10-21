@@ -1,0 +1,42 @@
+# php2shell — request fingerprints (CVE-2026-109618 / CVE-2026-109619)
+# Source: PHP-UP-2026 PoC bundle, jackalsyn.com/posts/php-up-2026.html
+#         (poc0_109618.py, poc1_109619.py, php_up_framework.py), read 2026-10-21.
+# Live corroboration: @uwu_underground, 2026-10-21 04:35:32 UTC,
+#         https://x.com/uwu_underground/status/2112764701553971582
+# Read-only signatures. Nothing here sends traffic.
+#
+# EXACT STRINGS FROM THE POC
+#   User-Agent: php2shell-109618
+#   User-Agent: php2shell-109619
+#   Content-Type: multipart/form-data; boundary=B7kQpoc618
+#   Content-Type: multipart/form-data; boundary=B7kQpoc619
+#   multipart field: PHP_SESSION_UPLOAD_PROGRESS   (value "x" in the PoC)
+#   multipart field: PHPSESSID                      (attacker-chosen session id)
+#   multipart parts: f (filename "a"), g (filename "b", bug 618), 149 x t[]
+#   method/path: POST to any .php path (PoC examples /x.php, /Books/index.php,
+#                /wordpress/wp-content/index.php)
+#   success marker in the response body: JACKALPOC  (default command echoes it)
+#   default command: id; echo JACKALPOC  (framework) / uname -a; id; echo JACKALPOC (poc1)
+#
+# REGEXES FOR LOG / PCAP / PROXY GREP
+(?i)user-agent:\s*php2shell-\d{6}
+(?i)\bphp2shell-(?:109618|109619)\b
+(?i)boundary=B7kQpoc\d{3}
+(?i)content-type:\s*multipart/form-data;\s*boundary=B7kQpoc\d{3}
+(?i)name="PHP_SESSION_UPLOAD_PROGRESS"
+(?i)PHP_SESSION_UPLOAD_PROGRESS
+(?i)JACKALPOC
+#
+# CONTEXT-ONLY (very noisy; do not alert on this alone)
+(?i)multipart/form-data;\s*boundary=[A-Za-z0-9._-]{6,70}
+#
+# NOTES
+# - The observed wave increments the UA number per request; the regex uses \d{6}
+#   rather than only the two PoC values. @ravixalgorithm, 2026-10-21 05:26 UTC:
+#   "incrementing the user agent number on every request".
+# - nginx's default combined log records the User-Agent but NOT Content-Type,
+#   so boundary matching requires a custom log_format ($http_content_type),
+#   a proxy that logs headers, or packet/body capture.
+# - The PoC body is large (149 t[] spray parts plus >5 KB fillers) and is sent
+#   in two chunks with a ~1.35 s stall. A POST that pauses mid-body is itself
+#   suspicious, but load balancers and slow clients can produce the same shape.

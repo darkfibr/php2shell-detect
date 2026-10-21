@@ -1,0 +1,23 @@
+# php2shell / CVE-2026-109618 / CVE-2026-109619 — Snort 2.9 rules
+# Status: UNTESTED against real traffic. Validate with `snort -T -c snort.conf`
+# after including this file. $EXTERNAL_NET/$HOME_NET/$HTTP_PORTS are the
+# standard Snort variables.
+
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"php2shell exploit attempt - User-Agent php2shell-1096xx (CVE-2026-109618/109619)"; flow:to_server,established; content:"User-Agent|3A 20|php2shell-"; http_header; nocase; classtype:attempted-admin; reference:cve,2026-109618; reference:cve,2026-109619; sid:2026102111; rev:1;)
+
+alert tcp $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS (msg:"php2shell exploit attempt - multipart boundary B7kQpoc (CVE-2026-109618/109619)"; flow:to_server,established; content:"Content-Type|3A 20|multipart/form-data"; http_header; nocase; content:"boundary=B7kQpoc"; http_header; nocase; classtype:attempted-admin; reference:cve,2026-109618; reference:cve,2026-109619; sid:2026102112; rev:1;)
+
+# The boundary rule depends on the client sending the exact PoC boundary. The
+# wave may rotate the suffix; if so, change "B7kQpoc" to a shorter "boundary=B7k"
+# and accept more false positives, or move the check to a body/PCAP rule.
+# Neither rule inspects the request body; PHP_SESSION_UPLOAD_PROGRESS body
+# matching in Snort 2.9 requires stream5/HTTP body inspection and is left out
+# deliberately to avoid a rule that silently never fires.
+
+# --- v2 (2026-10-21): Snort 3, UA-independent mechanics shape ----------------
+# Requires HTTP client-body inspection (http_inspect with request_body enabled
+# in snort.lua). 2000005 = both mechanics markers in one POST body; that is an
+# exploit attempt even with a completely clean user agent. Snort 2.9 users:
+# keep the v1 rules and detect the shape offline with php2shell_scan.py instead.
+alert http any any -> $HOME_NET any (msg:"PHP php2shell known PoC user-agent (CVE-2026-109618/109619)"; flow:to_server,established; http.header; content:"User-Agent|3a| php2shell-"; nocase; sid:2000004; rev:1;)
+alert http any any -> $HOME_NET any (msg:"PHP php2shell mechanics shape: upload-progress + array reclaim spray (CVE-2026-109618/109619)"; flow:to_server,established; http.method; content:"POST"; http.uri; content:".php"; http_client_body; content:"PHP_SESSION_UPLOAD_PROGRESS"; nocase; http_client_body; content:"t[]"; nocase; sid:2000005; rev:1;)

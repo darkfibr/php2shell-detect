@@ -1,0 +1,15 @@
+POST /contact.php HTTP/1.1
+User-Agent: Mozilla/5.0
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA
+
+------WebKitFormBoundary7MA
+Content-Disposition: form-data; name="name"
+
+Alice
+------WebKitFormBoundary7MA
+Content-Disposition: form-data; name="message[]"
+
+hello
+------WebKitFormBoundary7MA
+Content-Disposition: form-data; name="attachment"; filename="cv.pdf"
+
